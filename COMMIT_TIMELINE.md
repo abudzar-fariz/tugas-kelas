@@ -18,18 +18,3 @@ Rencana ini sengaja memecah pekerjaan menjadi perubahan kecil yang dapat ditinja
 | 12 | `build: add Docker Compose development environment` | Dockerfile API/web, `docker-compose.yml`, healthcheck database, named volume, perintah startup migrasi/seeder bila diperlukan. | Dari checkout bersih: salin `.env.example`, lalu `docker compose up --build` dan akses web/API. |
 | 13 | `fix: harden validation and polish user states` | Perbaikan hasil pengujian manual: validasi, pesan error, empty/loading state, dan batas akses. | Uji manual seluruh acceptance criteria. |
 | 14 | `docs: add setup and API README` | **Commit terakhir.** Tulis README berisi cara menjalankan dari nol dengan Docker, akun seed, endpoint, desain, keamanan, serta keterbatasan/lanjutan. | Ikuti README dari kondisi checkout baru dan pastikan tidak ada rahasia tersimpan. |
-
-## Urutan kerja harian yang praktis
-
-1. Buat branch kerja, lalu commit 1–2 untuk fondasi dan keputusan desain.
-2. Selesaikan backend dan test (commit 3–8), dengan test dilakukan sebelum frontend bergantung pada API.
-3. Bangun frontend (commit 9–11) terhadap endpoint yang sudah diverifikasi dengan test dan Postman.
-4. Tambahkan Docker dan lakukan uji end-to-end (commit 12–13).
-5. Baru tulis README sebagai commit 14, sehingga isinya merefleksikan aplikasi yang benar-benar sudah dapat dijalankan.
-
-## Catatan riwayat Git
-
-- Gunakan satu commit untuk satu perubahan bermakna; hindari commit campuran fitur, format besar, dan dokumentasi tidak terkait.
-- Jika sebuah commit membutuhkan perbaikan kecil sebelum tahap berikutnya, gunakan pesan `fix(api): ...` atau `fix(web): ...` yang spesifik.
-- Jangan mengubah histori bersama yang sudah dipush. Jika perlu koreksi, buat commit baru agar proses pengerjaan tetap dapat diaudit.
-- Sebelum commit akhir, cek `git diff --check`, `git status`, test backend, build frontend, dan startup `docker compose`.
