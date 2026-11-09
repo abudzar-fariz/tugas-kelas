@@ -367,7 +367,7 @@ tugas-kelas/
 
 ## Catatan Pengerjaan
 
-Proyek ini dibuat dengan banyak bantuan AI (Kiro). Hampir seluruh struktur dan implementasi dihasilkan bersama AI, termasuk:
+Proyek ini dibuat dengan banyak bantuan AI. Hampir seluruh struktur dan implementasi dihasilkan bersama AI, termasuk:
 
 - Dokumentasi `BLUEPRINT.md` dan `COMMIT_TIMELINE.md`
 - Seluruh backend (schema Prisma, services, validators, middleware, routes, tests)
