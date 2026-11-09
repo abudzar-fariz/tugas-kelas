@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         Role
+  className    String?  @map("class_name") @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tasks           Task[]
+  taskCompletions TaskCompletion[]
+
+  @@map("users")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String   @db.VarChar(150)
+  description String   @db.Text
+  dueDate     DateTime @map("due_date")
+  className   String   @map("class_name") @db.VarChar(100)
+  teacherId   String   @map("teacher_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  teacher         User             @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  taskCompletions TaskCompletion[]
+
+  @@map("tasks")
+}
+
+model TaskCompletion {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  studentId   String   @map("student_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  task    Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, studentId])
+  @@map("task_completions")
+}
