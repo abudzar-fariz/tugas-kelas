@@ -9,6 +9,10 @@ import {
   updateTaskHandler,
   deleteTaskHandler,
 } from '../controllers/task.controller';
+import {
+  markCompleteHandler,
+  unmarkCompleteHandler,
+} from '../controllers/completion.controller';
 
 const router = Router();
 
@@ -25,5 +29,9 @@ router.get('/:id', getTaskHandler);
 router.post('/', authorizeRole(Role.TEACHER), createTaskHandler);
 router.patch('/:id', authorizeRole(Role.TEACHER), updateTaskHandler);
 router.delete('/:id', authorizeRole(Role.TEACHER), deleteTaskHandler);
+
+// Student-only completion endpoints (idempotent)
+router.put('/:id/completion', authorizeRole(Role.STUDENT), markCompleteHandler);
+router.delete('/:id/completion', authorizeRole(Role.STUDENT), unmarkCompleteHandler);
 
 export default router;

@@ -32,27 +32,47 @@ export async function createTask(input: CreateTaskInput, teacherId: string) {
   });
 }
 
-export async function getTaskById(taskId: string, requesterId: string, requesterRole: Role) {
+export async function getTaskById(
+  taskId: string,
+  requesterId: string,
+  requesterRole: Role,
+  requesterClassName?: string | null,
+) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    select: taskSelect,
+    select: {
+      ...taskSelect,
+      taskCompletions: {
+        where: { studentId: requesterId },
+        select: { id: true, completedAt: true },
+      },
+    },
   });
 
   if (!task) throw notFound('Tugas tidak ditemukan');
 
-  // Teacher can only see their own tasks
+  // Teacher: only see own tasks
   if (requesterRole === Role.TEACHER && task.teacherId !== requesterId) {
     throw notFound('Tugas tidak ditemukan');
   }
 
-  return task;
+  // Student: only see tasks for their class
+  if (requesterRole === Role.STUDENT && task.className !== requesterClassName) {
+    throw notFound('Tugas tidak ditemukan');
+  }
+
+  const { taskCompletions, ...taskData } = task;
+  return {
+    ...taskData,
+    isCompleted: requesterRole === Role.STUDENT ? taskCompletions.length > 0 : undefined,
+    completedAt:
+      requesterRole === Role.STUDENT && taskCompletions.length > 0
+        ? taskCompletions[0]?.completedAt
+        : undefined,
+  };
 }
 
-export async function updateTask(
-  taskId: string,
-  input: UpdateTaskInput,
-  teacherId: string,
-) {
+export async function updateTask(taskId: string, input: UpdateTaskInput, teacherId: string) {
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) throw notFound('Tugas tidak ditemukan');
   if (task.teacherId !== teacherId) throw forbidden('Anda bukan pemilik tugas ini');
@@ -77,16 +97,20 @@ export async function deleteTask(taskId: string, teacherId: string) {
   await prisma.task.delete({ where: { id: taskId } });
 }
 
-export async function listTasks(query: TaskQuery, requesterId: string, requesterRole: Role) {
+export async function listTasks(
+  query: TaskQuery,
+  requesterId: string,
+  requesterRole: Role,
+  requesterClassName?: string | null,
+) {
   const { search, status, page, limit } = query;
   const skip = (page - 1) * limit;
 
-  // Base filter by role
+  // Role-based base filter
   const roleFilter =
     requesterRole === Role.TEACHER
       ? { teacherId: requesterId }
-      : // Student filter handled in commit 6 via className; for now return empty for students
-        { id: 'none' };
+      : { className: requesterClassName ?? '__no_class__' };
 
   const searchFilter = search
     ? {
@@ -97,9 +121,19 @@ export async function listTasks(query: TaskQuery, requesterId: string, requester
       }
     : {};
 
-  // status filter requires knowing completions — fully implemented in commit 6
-  // Here we list tasks without completion status for teacher view
-  const where = { ...roleFilter, ...searchFilter };
+  // Status filter for students: join task_completions
+  let statusFilter = {};
+  if (requesterRole === Role.STUDENT && status === 'completed') {
+    statusFilter = {
+      taskCompletions: { some: { studentId: requesterId } },
+    };
+  } else if (requesterRole === Role.STUDENT && status === 'pending') {
+    statusFilter = {
+      taskCompletions: { none: { studentId: requesterId } },
+    };
+  }
+
+  const where = { ...roleFilter, ...searchFilter, ...statusFilter };
 
   const [tasks, total] = await Promise.all([
     prisma.task.findMany({
@@ -107,6 +141,11 @@ export async function listTasks(query: TaskQuery, requesterId: string, requester
       select: {
         ...taskSelect,
         _count: { select: { taskCompletions: true } },
+        // For students: include their own completion status
+        taskCompletions:
+          requesterRole === Role.STUDENT
+            ? { where: { studentId: requesterId }, select: { id: true, completedAt: true } }
+            : false,
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -115,11 +154,25 @@ export async function listTasks(query: TaskQuery, requesterId: string, requester
     prisma.task.count({ where }),
   ]);
 
-  // Suppress unused status param warning until commit 6
-  void status;
+  const data = tasks.map((task) => {
+    const { taskCompletions, ...rest } = task as typeof task & {
+      taskCompletions?: { id: string; completedAt: Date }[];
+    };
+    if (requesterRole === Role.STUDENT) {
+      return {
+        ...rest,
+        isCompleted: (taskCompletions ?? []).length > 0,
+        completedAt:
+          (taskCompletions ?? []).length > 0
+            ? (taskCompletions ?? [])[0]?.completedAt
+            : undefined,
+      };
+    }
+    return rest;
+  });
 
   return {
-    data: tasks,
+    data,
     meta: {
       page,
       limit,

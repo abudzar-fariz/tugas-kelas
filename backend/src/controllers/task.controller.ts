@@ -19,7 +19,12 @@ export async function createTaskHandler(req: Request, res: Response, next: NextF
 export async function listTasksHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const query = taskQuerySchema.parse(req.query);
-    const result = await taskService.listTasks(query, req.user!.id, req.user!.role);
+    const result = await taskService.listTasks(
+      query,
+      req.user!.id,
+      req.user!.role,
+      req.user!.className,
+    );
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -32,6 +37,7 @@ export async function getTaskHandler(req: Request, res: Response, next: NextFunc
       req.params['id'] as string,
       req.user!.id,
       req.user!.role,
+      req.user!.className,
     );
     res.status(200).json({ data: task });
   } catch (err) {
