@@ -1,8 +1,9 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { forbidden, notFound } from '../utils/errors';
 import type { CreateTaskInput, UpdateTaskInput, TaskQuery } from '../validators/task.validator';
 
 const prisma = new PrismaClient();
+type Role = 'TEACHER' | 'STUDENT';
 
 // Fields returned for every task response — never leaks teacher password
 const taskSelect = {
@@ -52,21 +53,21 @@ export async function getTaskById(
   if (!task) throw notFound('Tugas tidak ditemukan');
 
   // Teacher: only see own tasks
-  if (requesterRole === Role.TEACHER && task.teacherId !== requesterId) {
+  if (requesterRole === 'TEACHER' && task.teacherId !== requesterId) {
     throw notFound('Tugas tidak ditemukan');
   }
 
   // Student: only see tasks for their class
-  if (requesterRole === Role.STUDENT && task.className !== requesterClassName) {
+  if (requesterRole === 'STUDENT' && task.className !== requesterClassName) {
     throw notFound('Tugas tidak ditemukan');
   }
 
   const { taskCompletions, ...taskData } = task;
   return {
     ...taskData,
-    isCompleted: requesterRole === Role.STUDENT ? taskCompletions.length > 0 : undefined,
+    isCompleted: requesterRole === 'STUDENT' ? taskCompletions.length > 0 : undefined,
     completedAt:
-      requesterRole === Role.STUDENT && taskCompletions.length > 0
+      requesterRole === 'STUDENT' && taskCompletions.length > 0
         ? taskCompletions[0]?.completedAt
         : undefined,
   };
@@ -108,7 +109,7 @@ export async function listTasks(
 
   // Role-based base filter
   const roleFilter =
-    requesterRole === Role.TEACHER
+    requesterRole === 'TEACHER'
       ? { teacherId: requesterId }
       : { className: requesterClassName ?? '__no_class__' };
 
@@ -123,11 +124,11 @@ export async function listTasks(
 
   // Status filter for students: join task_completions
   let statusFilter = {};
-  if (requesterRole === Role.STUDENT && status === 'completed') {
+  if (requesterRole === 'STUDENT' && status === 'completed') {
     statusFilter = {
       taskCompletions: { some: { studentId: requesterId } },
     };
-  } else if (requesterRole === Role.STUDENT && status === 'pending') {
+  } else if (requesterRole === 'STUDENT' && status === 'pending') {
     statusFilter = {
       taskCompletions: { none: { studentId: requesterId } },
     };
@@ -143,7 +144,7 @@ export async function listTasks(
         _count: { select: { taskCompletions: true } },
         // For students: include their own completion status
         taskCompletions:
-          requesterRole === Role.STUDENT
+          requesterRole === 'STUDENT'
             ? { where: { studentId: requesterId }, select: { id: true, completedAt: true } }
             : false,
       },
@@ -154,11 +155,23 @@ export async function listTasks(
     prisma.task.count({ where }),
   ]);
 
-  const data = tasks.map((task) => {
-    const { taskCompletions, ...rest } = task as typeof task & {
-      taskCompletions?: { id: string; completedAt: Date }[];
-    };
-    if (requesterRole === Role.STUDENT) {
+  interface TaskWithCompletions {
+    taskCompletions?: { id: string; completedAt: Date }[];
+    id: string;
+    title: string;
+    description: string;
+    dueDate: Date;
+    className: string;
+    teacherId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    teacher: { id: string; name: string; email: string };
+    _count?: { taskCompletions: number };
+  }
+
+  const data = (tasks as TaskWithCompletions[]).map((task) => {
+    const { taskCompletions, ...rest } = task;
+    if (requesterRole === 'STUDENT') {
       return {
         ...rest,
         isCompleted: (taskCompletions ?? []).length > 0,

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { Role } from '@prisma/client';
 
 export const registerSchema = z
   .object({
@@ -17,7 +16,7 @@ export const registerSchema = z
       .string()
       .min(8, 'Password minimal 8 karakter')
       .max(72, 'Password maksimal 72 karakter (batas bcrypt)'),
-    role: z.nativeEnum(Role, {
+    role: z.enum(['TEACHER', 'STUDENT'], {
       errorMap: () => ({ message: 'Role harus TEACHER atau STUDENT' }),
     }),
     className: z
@@ -30,15 +29,14 @@ export const registerSchema = z
   })
   .refine(
     (data) => {
-      if (data.role === Role.STUDENT && !data.className) return false;
+      if (data.role === 'STUDENT' && !data.className) return false;
       return true;
     },
     { message: 'Siswa wajib mengisi nama kelas', path: ['className'] },
   )
   .refine(
     (data) => {
-      // className harus null/undefined untuk guru
-      if (data.role === Role.TEACHER && data.className) return false;
+      if (data.role === 'TEACHER' && data.className) return false;
       return true;
     },
     { message: 'Guru tidak perlu mengisi nama kelas', path: ['className'] },

@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { Role } from '@prisma/client';
 import { authenticate } from '../middleware/authenticate';
 import { authorizeRole } from '../middleware/authorizeRole';
 import {
@@ -26,12 +25,12 @@ router.get('/', listTasksHandler);
 router.get('/:id', getTaskHandler);
 
 // Teacher-only mutations
-router.post('/', authorizeRole(Role.TEACHER), createTaskHandler);
-router.patch('/:id', authorizeRole(Role.TEACHER), updateTaskHandler);
-router.delete('/:id', authorizeRole(Role.TEACHER), deleteTaskHandler);
+router.post('/', authorizeRole('TEACHER'), createTaskHandler);
+router.patch('/:id', authorizeRole('TEACHER'), updateTaskHandler);
+router.delete('/:id', authorizeRole('TEACHER'), deleteTaskHandler);
 
 // Student-only completion endpoints (idempotent)
-router.put('/:id/completion', authorizeRole(Role.STUDENT), markCompleteHandler);
-router.delete('/:id/completion', authorizeRole(Role.STUDENT), unmarkCompleteHandler);
+router.put('/:id/completion', authorizeRole('STUDENT'), markCompleteHandler);
+router.delete('/:id/completion', authorizeRole('STUDENT'), unmarkCompleteHandler);
 
 export default router;

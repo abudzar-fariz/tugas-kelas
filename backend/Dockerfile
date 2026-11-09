@@ -12,8 +12,9 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY prisma ./prisma
 COPY src ./src
-RUN npm run build
+# Generate Prisma Client BEFORE compiling TypeScript so types are available
 RUN npx prisma generate
+RUN npm run build
 
 # ── Stage 3: runner ──────────────────────────────────────────────────────────
 FROM node:22-alpine AS runner

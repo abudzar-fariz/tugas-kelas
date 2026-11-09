@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { conflict, unauthorized } from '../utils/errors';
 import type { RegisterInput, LoginInput } from '../validators/auth.validator';
-
 const prisma = new PrismaClient();
 const BCRYPT_COST = 12;
 
@@ -17,8 +16,8 @@ function signToken(payload: {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET is not configured');
 
-  const expiresIn = (process.env.JWT_EXPIRES_IN ?? '8h') as jwt.SignOptions['expiresIn'];
-  return jwt.sign(payload, secret, { expiresIn });
+  const expiresIn = (process.env.JWT_EXPIRES_IN ?? '8h') as string;
+  return jwt.sign(payload, secret as string, { expiresIn });
 }
 
 function safeUser(user: {

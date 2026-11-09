@@ -1,4 +1,5 @@
-import { Role } from '@prisma/client';
+// Module augmentation — must have at least one import/export to be treated as a module
+export {};
 
 declare global {
   namespace Express {
@@ -7,7 +8,7 @@ declare global {
         id: string;
         email: string;
         name: string;
-        role: Role;
+        role: 'TEACHER' | 'STUDENT';
         className: string | null;
       };
     }

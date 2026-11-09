@@ -25,12 +25,13 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
   }
 
   try {
-    const payload = jwt.verify(token, secret) as JwtPayload;
+    const payload = jwt.verify(token, secret as string) as JwtPayload;
     req.user = {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
-      role: payload.role as import('@prisma/client').Role,
+      // Role enum values match string literals — safe cast after JWT verification
+      role: payload.role as 'TEACHER' | 'STUDENT',
       className: payload.className,
     };
     next();
