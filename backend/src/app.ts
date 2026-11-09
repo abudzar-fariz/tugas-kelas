@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes';
+import taskRoutes from './routes/task.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -15,6 +16,7 @@ app.get('/health', (_req, res) => {
 
 // API v1 routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/tasks', taskRoutes);
 
 // Centralized error handler — must be last
 app.use(errorHandler);
