@@ -362,3 +362,22 @@ tugas-kelas/
 ├── BLUEPRINT.md
 └── COMMIT_TIMELINE.md
 ```
+
+---
+
+## Catatan Pengerjaan
+
+Proyek ini dibuat dengan banyak bantuan AI (Kiro). Hampir seluruh struktur dan implementasi dihasilkan bersama AI, termasuk:
+
+- Dokumentasi `BLUEPRINT.md` dan `COMMIT_TIMELINE.md`
+- Seluruh backend (schema Prisma, services, validators, middleware, routes, tests)
+- Seluruh frontend (API client, hooks, komponen, halaman)
+
+Bagian yang saya kerjakan sendiri secara manual:
+
+- `backend/src/middleware/authenticate.ts`
+- `backend/src/controllers/auth.controller.ts`
+- `backend/Dockerfile`
+- `docker-compose.yml`
+- `backend/src/app.ts`
+- `backend/tests/postman-checklist.md`
