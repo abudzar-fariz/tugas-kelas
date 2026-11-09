@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useTasks } from '../hooks/useTasks';
+import { useStudentTasks } from '../hooks/useStudentTasks';
 import { TeacherTaskCard } from '../components/TaskCard';
+import { StudentTaskCard } from '../components/StudentTaskCard';
 import { TaskForm, type TaskFormValues } from '../components/TaskForm';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { Task } from '../types';
@@ -155,6 +157,137 @@ function TeacherView() {
   );
 }
 
+// Student task tracking view
+function StudentView() {
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [status, setStatus] = useState<'' | 'completed' | 'pending'>('');
+  const [page, setPage] = useState(1);
+
+  const { tasks, meta, isLoading, error, refetch, togglingId, toggleCompletion, pageLimit } =
+    useStudentTasks({ search, status, page });
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setSearch(searchInput);
+    setPage(1);
+  }
+
+  function handleStatusChange(newStatus: '' | 'completed' | 'pending') {
+    setStatus(newStatus);
+    setPage(1);
+  }
+
+  return (
+    <>
+      {/* Toolbar */}
+      <div style={styles.toolbar}>
+        <form onSubmit={handleSearch} style={styles.searchForm}>
+          <input
+            type="search"
+            placeholder="Cari tugas..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={styles.searchInput}
+            aria-label="Cari tugas"
+          />
+          <button type="submit" style={styles.searchBtn}>Cari</button>
+        </form>
+
+        <div style={styles.filterGroup}>
+          {(['', 'pending', 'completed'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => handleStatusChange(s)}
+              style={{
+                ...styles.filterBtn,
+                backgroundColor: status === s ? '#2563eb' : '#f3f4f6',
+                color: status === s ? '#fff' : '#374151',
+                border: status === s ? 'none' : '1px solid #d1d5db',
+              }}
+            >
+              {s === '' ? 'Semua' : s === 'pending' ? 'Belum Selesai' : 'Selesai'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Error banner */}
+      {error && (
+        <div style={styles.errorBanner} role="alert">
+          <p style={{ margin: 0 }}>{error}</p>
+          <button onClick={refetch} style={styles.retryBtn}>Coba Lagi</button>
+        </div>
+      )}
+
+      {/* Content */}
+      {isLoading ? (
+        <div style={styles.stateBox}>
+          <p style={styles.stateText}>Memuat tugas...</p>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div style={styles.stateBox}>
+          <p style={styles.stateText}>
+            {search
+              ? `Tidak ada tugas yang cocok dengan "${search}".`
+              : status === 'completed'
+              ? 'Belum ada tugas yang diselesaikan.'
+              : status === 'pending'
+              ? 'Semua tugas sudah selesai.'
+              : 'Belum ada tugas untuk kelasmu.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div style={styles.grid}>
+            {tasks.map((task) => (
+              <StudentTaskCard
+                key={task.id}
+                task={task}
+                isToggling={togglingId === task.id}
+                onToggle={toggleCompletion}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {meta && meta.totalPages > 1 && (
+            <div style={styles.pagination}>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{ ...styles.pageBtn, opacity: page === 1 ? 0.4 : 1 }}
+              >
+                ← Sebelumnya
+              </button>
+              <span style={styles.pageInfo}>
+                Halaman {page} / {meta.totalPages}
+                <span style={{ color: '#9ca3af', marginLeft: '0.5rem' }}>
+                  ({meta.total} tugas)
+                </span>
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                disabled={page === meta.totalPages}
+                style={{ ...styles.pageBtn, opacity: page === meta.totalPages ? 0.4 : 1 }}
+              >
+                Berikutnya →
+              </button>
+            </div>
+          )}
+
+          {meta && meta.totalPages <= 1 && (
+            <p style={styles.paginationHint}>
+              Menampilkan {tasks.length} dari {meta.total} tugas
+              {` (${pageLimit} per halaman)`}
+            </p>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 export function TasksPage() {
   const { user, logout } = useAuth();
   const isTeacher = user?.role === 'TEACHER';
@@ -178,10 +311,7 @@ export function TasksPage() {
         {isTeacher ? (
           <TeacherView />
         ) : (
-          // Student view akan diimplementasi di commit 11
-          <div style={styles.stateBox}>
-            <p style={styles.stateText}>Tampilan siswa akan tersedia segera.</p>
-          </div>
+          <StudentView />
         )}
       </main>
     </div>
@@ -302,5 +432,39 @@ const styles = {
     color: '#9ca3af',
     fontSize: '0.875rem',
     marginTop: '1rem',
+  },
+  filterGroup: {
+    display: 'flex',
+    gap: '0.375rem',
+    flexWrap: 'wrap' as const,
+  },
+  filterBtn: {
+    padding: '0.375rem 0.75rem',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '0.8125rem',
+    fontWeight: 500,
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '1rem',
+    marginTop: '1.5rem',
+    flexWrap: 'wrap' as const,
+  },
+  pageBtn: {
+    padding: '0.5rem 1rem',
+    backgroundColor: '#f3f4f6',
+    border: '1px solid #d1d5db',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: '#374151',
+  },
+  pageInfo: {
+    fontSize: '0.875rem',
+    color: '#374151',
   },
 } as const;
