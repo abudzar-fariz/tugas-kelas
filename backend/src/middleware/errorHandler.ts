@@ -12,7 +12,7 @@ export function errorHandler(
   if (err instanceof ZodError) {
     const appErr = validationError(
       err.errors.map((e) => ({
-        field: e.path.join('.'),
+        field: e.path.length > 0 ? e.path.join('.') : 'body',
         message: e.message,
       })),
     );
@@ -26,7 +26,7 @@ export function errorHandler(
     return;
   }
 
-  // Unknown errors — hide details from client
+  // Unknown errors — hide details from client in production
   console.error('[Unhandled Error]', err);
   res.status(500).json({
     error: {

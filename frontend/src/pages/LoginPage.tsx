@@ -10,15 +10,23 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
+    // Client-side validation
+    const fe: { email?: string; password?: string } = {};
+    if (!email.trim()) fe.email = 'Email wajib diisi';
+    if (!password) fe.password = 'Password wajib diisi';
+    if (Object.keys(fe).length > 0) { setFieldErrors(fe); return; }
+    setFieldErrors({});
+
+    setIsSubmitting(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       navigate('/tasks', { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -48,10 +56,11 @@ export function LoginPage() {
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={styles.input}
+              onChange={(e) => { setEmail(e.target.value); setFieldErrors((f) => ({ ...f, email: undefined })); }}
+              style={{ ...styles.input, borderColor: fieldErrors.email ? '#ef4444' : '#d1d5db' }}
               disabled={isSubmitting}
             />
+            {fieldErrors.email && <p style={styles.fieldError}>{fieldErrors.email}</p>}
           </div>
 
           <div style={styles.field}>
@@ -64,10 +73,11 @@ export function LoginPage() {
               autoComplete="current-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.input}
+              onChange={(e) => { setPassword(e.target.value); setFieldErrors((f) => ({ ...f, password: undefined })); }}
+              style={{ ...styles.input, borderColor: fieldErrors.password ? '#ef4444' : '#d1d5db' }}
               disabled={isSubmitting}
             />
+            {fieldErrors.password && <p style={styles.fieldError}>{fieldErrors.password}</p>}
           </div>
 
           {error && (
@@ -158,4 +168,5 @@ const styles = {
   },
   footer: { marginTop: '1.5rem', textAlign: 'center' as const, fontSize: '0.875rem', color: '#6b7280' },
   link: { color: '#2563eb', textDecoration: 'none' },
+  fieldError: { color: '#dc2626', fontSize: '0.75rem', margin: '0.25rem 0 0' },
 } as const;

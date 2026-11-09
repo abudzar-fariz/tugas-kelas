@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { Task } from '../types';
 import { ApiError } from '../api/client';
+import type { ApiErrorDetail } from '../types';
 
 export interface TaskFormValues {
   title: string;
@@ -30,6 +31,11 @@ export function TaskForm({ initial, isSubmitting, onSubmit, onCancel }: Props) {
   });
   const [errors, setErrors] = useState<Partial<TaskFormValues>>({});
   const [apiError, setApiError] = useState<string | null>(null);
+  const [apiFieldErrors, setApiFieldErrors] = useState<ApiErrorDetail[]>([]);
+
+  function getFieldError(field: keyof TaskFormValues): string | undefined {
+    return errors[field] ?? apiFieldErrors.find((e) => e.field === field)?.message;
+  }
 
   useEffect(() => {
     if (initial) {
@@ -56,6 +62,7 @@ export function TaskForm({ initial, isSubmitting, onSubmit, onCancel }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setApiError(null);
+    setApiFieldErrors([]);
     if (!validate()) return;
 
     try {
@@ -65,7 +72,11 @@ export function TaskForm({ initial, isSubmitting, onSubmit, onCancel }: Props) {
       });
     } catch (err) {
       if (err instanceof ApiError) {
-        setApiError(err.message);
+        if (err.details.length > 0) {
+          setApiFieldErrors(err.details);
+        } else {
+          setApiError(err.message);
+        }
       } else {
         setApiError('Terjadi kesalahan. Coba lagi.');
       }
@@ -76,6 +87,7 @@ export function TaskForm({ initial, isSubmitting, onSubmit, onCancel }: Props) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setValues((v) => ({ ...v, [field]: e.target.value }));
       setErrors((err) => ({ ...err, [field]: undefined }));
+      setApiFieldErrors((prev) => prev.filter((fe) => fe.field !== field));
     };
   }
 
@@ -87,44 +99,44 @@ export function TaskForm({ initial, isSubmitting, onSubmit, onCancel }: Props) {
         <h2 style={styles.title}>{isEdit ? 'Edit Tugas' : 'Tambah Tugas'}</h2>
 
         <form onSubmit={handleSubmit} noValidate>
-          <Field label="Judul" error={errors.title}>
+          <Field label="Judul" error={getFieldError('title')}>
             <input
               type="text"
               value={values.title}
               onChange={handleChange('title')}
-              style={inputStyle(!!errors.title)}
+              style={inputStyle(!!getFieldError('title'))}
               disabled={isSubmitting}
               maxLength={150}
             />
           </Field>
 
-          <Field label="Deskripsi" error={errors.description}>
+          <Field label="Deskripsi" error={getFieldError('description')}>
             <textarea
               value={values.description}
               onChange={handleChange('description')}
               rows={3}
-              style={{ ...inputStyle(!!errors.description), resize: 'vertical' }}
+              style={{ ...inputStyle(!!getFieldError('description')), resize: 'vertical' }}
               disabled={isSubmitting}
             />
           </Field>
 
-          <Field label="Tenggat Waktu" error={errors.dueDate}>
+          <Field label="Tenggat Waktu" error={getFieldError('dueDate')}>
             <input
               type="datetime-local"
               value={values.dueDate}
               onChange={handleChange('dueDate')}
-              style={inputStyle(!!errors.dueDate)}
+              style={inputStyle(!!getFieldError('dueDate'))}
               disabled={isSubmitting}
             />
           </Field>
 
-          <Field label="Nama Kelas" error={errors.className}>
+          <Field label="Nama Kelas" error={getFieldError('className')}>
             <input
               type="text"
               placeholder="Contoh: 10-A"
               value={values.className}
               onChange={handleChange('className')}
-              style={inputStyle(!!errors.className)}
+              style={inputStyle(!!getFieldError('className'))}
               disabled={isSubmitting}
               maxLength={100}
             />
